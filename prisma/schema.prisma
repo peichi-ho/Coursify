@@ -1,0 +1,135 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  name         String
+  studentId    String       @unique
+  email        String       @unique
+  department   String?
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  enrollments  Enrollment[]
+  memos        Memo[]
+  notes        Note[]
+
+  // ⭐ 新增：這個 user 當作者的所有主題
+  chatTopics   ChatTopic[]   @relation("UserChatTopics")
+  // ⭐ 新增：這個 user 寫的所有留言
+  chatMessages ChatMessage[] @relation("UserChatMessages")
+
+  points            Int                @default(0)
+  pointTransactions PointTransaction[]
+  notePurchases     NotePurchase[]
+}
+
+model Course {
+  id        Int      @id @default(autoincrement())
+  name      String
+  teacher   String?
+  weekday   String?
+  timeSlot  String?
+  createdAt DateTime @default(now())
+
+  enrollments Enrollment[]
+  notes       Note[] // 🔹 新增：這堂課底下的所有 Note
+  chatTopics  ChatTopic[]
+}
+
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId], name: "user_course_unique")
+}
+
+model Memo {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  title     String
+  dateISO   String
+  createdAt DateTime @default(now())
+}
+
+model Note {
+  id           Int      @id @default(autoincrement())
+  courseId     Int
+  userId       Int
+  title        String
+  price        Int
+  // 🔹 試閱檔放在 public 底下，任何人都可以打開（例如一頁 PDF）
+  previewUrl   String?
+  // 🔹 完整檔案存在伺服器檔案系統，不直接給前端 URL
+  fullFilePath String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  purchases NotePurchase[]
+}
+
+model NotePurchase {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  noteId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  note Note @relation(fields: [noteId], references: [id])
+
+  @@unique([userId, noteId], name: "user_note_unique")
+}
+
+model ChatTopic {
+  id        Int      @id @default(autoincrement())
+  courseId  Int
+  authorId  Int
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  course   Course        @relation(fields: [courseId], references: [id])
+  author   User          @relation("UserChatTopics", fields: [authorId], references: [id])
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id               Int       @id @default(autoincrement())
+  topicId          Int
+  authorId         Int
+  text             String
+  createdAt        DateTime  @default(now())
+  rewardedByAuthor Boolean   @default(false)
+  topic            ChatTopic @relation(fields: [topicId], references: [id])
+  author           User      @relation("UserChatMessages", fields: [authorId], references: [id])
+}
+
+enum PointType {
+  EARN // 獲得
+  USE // 使用
+}
+
+model PointTransaction {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  type      PointType
+  amount    Int // 正數，例如 5 點
+  message   String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
