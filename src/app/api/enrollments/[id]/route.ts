@@ -1,30 +1,26 @@
-// src/app/api/enrollments/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function DELETE(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const enrollmentId = Number(context.params.id);
-    if (!enrollmentId || Number.isNaN(enrollmentId)) {
-      return NextResponse.json(
-        { error: "無效的 enrollment id" },
-        { status: 400 }
-      );
-    }
+  // Next 16: params 是 Promise，要先拿出來
+  const { id } = await context.params;
 
+  const enrollmentId = Number(id);
+  if (!enrollmentId || Number.isNaN(enrollmentId)) {
+    return NextResponse.json({ error: "無效的選課 ID" }, { status: 400 });
+  }
+
+  try {
     await prisma.enrollment.delete({
       where: { id: enrollmentId },
     });
 
     return NextResponse.json({ success: true });
-  } catch (e: any) {
-    console.error("DELETE /api/enrollments/[id] error", e);
-    return NextResponse.json(
-      { error: "退選失敗，可能找不到這筆選課" },
-      { status: 400 }
-    );
+  } catch (e) {
+    console.error("退選失敗", e);
+    return NextResponse.json({ error: "退選失敗" }, { status: 500 });
   }
 }
