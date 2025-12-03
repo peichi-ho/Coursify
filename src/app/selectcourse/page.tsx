@@ -199,7 +199,7 @@ export default function SelectCoursesPage() {
             <input
               value={teacher}
               onChange={(e) => setTeacher(e.target.value)}
-              placeholder="例如 王小明"
+              placeholder="例如 王小明 （多位老師請用逗號或頓號隔開）"
               className="h-12 w-full rounded-[14px] bg-white px-4 text-base shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
             />
           </div>
