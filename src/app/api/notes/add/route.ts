@@ -1,8 +1,7 @@
 // src/app/api/notes/add/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import fs from "fs/promises";
-import path from "path";
+import { supabaseServer } from "@/lib/supabaseServer"; // ⭐ 新增：改用 Supabase Storage
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +39,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔴 檔案必填
     if (!file || file.size === 0) {
       return NextResponse.json(
         { error: "請上傳筆記檔案" },
@@ -48,7 +46,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 檢查 user / course 存在
+    // 檢查 user / course 是否存在
     const [user, course] = await Promise.all([
       prisma.user.findUnique({ where: { id: userId } }),
       prisma.course.findUnique({ where: { id: courseId } }),
@@ -61,24 +59,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "找不到課程" }, { status: 404 });
     }
 
-    // 處理檔案上傳（存到 public/uploads/notes）
-    let fileUrl: string | null = null;
+    // ⭐ 1) File -> Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // ⭐ 2) 準備上傳路徑（存在 bucket 裡的相對路徑）
+    const ext = file.name.split(".").pop() ?? "bin";
+    const safeFilename = `${Date.now()}-${userId}.${ext}`;
+    const storagePath = `notes/${safeFilename}`; // 存在 bucket "notes" 底下
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "notes");
-    await fs.mkdir(uploadDir, { recursive: true });
+    // ⭐ 3) 上傳到 Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabaseServer
+      .storage
+      .from("notes") // bucket 名稱
+      .upload(storagePath, buffer, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
 
-    const safeName =
-      Date.now().toString() + "-" + file.name.replace(/\s+/g, "_");
-    const filePath = path.join(uploadDir, safeName);
+    if (uploadError || !uploadData) {
+      console.error("Supabase upload error", uploadError);
+      return NextResponse.json(
+        { error: "檔案上傳失敗，請稍後再試" },
+        { status: 500 }
+      );
+    }
 
-    await fs.writeFile(filePath, buffer);
+    // ⭐ 4) 取得 public URL（或你也可以只存 path）
+    const { data: publicUrlData } = supabaseServer
+      .storage
+      .from("notes")
+      .getPublicUrl(uploadData.path);
 
-    // 前端可以用這個 URL 開啟檔案
-    fileUrl = `/uploads/notes/${safeName}`;
+    const fileUrl = publicUrlData.publicUrl;
+    const fullFilePath = uploadData.path; // 如果你 schema 有 fullFilePath 可存這個
 
+    // ⭐ 5) 寫入資料庫
     const note = await prisma.note.create({
       data: {
         courseId,
@@ -86,6 +102,7 @@ export async function POST(req: NextRequest) {
         title,
         price,
         fileUrl,
+        fullFilePath,
       },
       include: {
         user: {
@@ -102,7 +119,7 @@ export async function POST(req: NextRequest) {
           title: note.title,
           price: note.price,
           fileUrl: note.fileUrl,
-          // 🔹 目前先用同一個網址當「試閱」示意
+          // 目前先拿同一個網址當試閱
           previewUrl: note.fileUrl,
         },
       },
