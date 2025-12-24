@@ -1,6 +1,6 @@
 # Coursify
 
-Coursify is a student-centered course learning platform that integrates course discussions, note sharing, and peer-to-peer note trading to enhance collaborative learning.
+Coursify is a student-centered course learning platform that integrates course discussions, note sharing, smart reminder, and peer-to-peer note trading to enhance collaborative learning.
 
 ---
 
@@ -17,6 +17,7 @@ This project was developed as part of an academic and product development initia
 
 -  User authentication (sign up / login)
 -  Course enrollment and management
+-  Smart reminder
 -  Course-based discussion rooms
 -  Note sharing and preview
 -  Peer-to-peer note purchasing system
