@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Coursify
 
-## Getting Started
+Coursify is a student-centered course learning platform that integrates course discussions, note sharing, and peer-to-peer note trading to enhance collaborative learning.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Motivation
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+University students often use fragmented tools for learning, such as separate platforms for discussions, notes, and study resources.  
+Coursify aims to centralize these activities into one platform, enabling students to learn, share knowledge, and collaborate more efficiently.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This project was developed as part of an academic and product development initiative, focusing on building a functional MVP with real user interaction.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+##  Key Features
 
-To learn more about Next.js, take a look at the following resources:
+-  User authentication (sign up / login)
+-  Course enrollment and management
+-  Course-based discussion rooms
+-  Note sharing and preview
+-  Peer-to-peer note purchasing system
+-  Point-based reward mechanism
+-  User profile management
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+##  Tech Stack
 
-## Deploy on Vercel
+**Frontend**
+- Next.js (App Router)
+- React
+- Tailwind CSS
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Backend**
+- Next.js API Routes
+- Prisma ORM
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Database**
+- PostgreSQL (Supabase)
+
+**Other Tools**
+- bcrypt (password hashing)
+- Vercel (deployment)
+
+---
+
+##  Live Demo
+
+🔗 https://coursify-4cqr.vercel.app/
+
+> Note: This project is an MVP. Some features are still under active development.
+
+---
+
+##  My Role
+
+- Designed and implemented the full-stack architecture
+- Developed frontend UI and user interactions with Next.js
+- Designed database schema and Prisma models
+- Implemented core features such as discussion rooms and note trading
+- Integrated PostgreSQL database using Supabase
+- Deployed and managed the application on Vercel
+
+---
+
+##  Project Status
+
+-  Core features implemented
+-  User feedback collection and feature refinement ongoing
+
