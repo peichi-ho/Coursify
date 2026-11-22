@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { setSession } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ⚠️ 千萬不要把 passwordHash 傳回去
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         user: {
           id: user.id,
@@ -50,6 +51,9 @@ export async function POST(req: NextRequest) {
       },
       { status: 200 }
     );
+    // 登入狀態存在後端簽章的 httpOnly cookie
+    await setSession(res, user.id);
+    return res;
   } catch (error) {
     console.error("POST /api/auth/login error", error);
     return NextResponse.json(

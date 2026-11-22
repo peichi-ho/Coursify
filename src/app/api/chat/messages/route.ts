@@ -1,12 +1,16 @@
 // src/app/api/chat/messages/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 /**
  * 取得單一主題內容 + 所有留言
  * GET /api/chat/messages?topicId=123
  */
 export async function GET(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { searchParams } = new URL(req.url);
     const topicIdRaw = searchParams.get("topicId");
@@ -71,9 +75,12 @@ export async function GET(req: NextRequest) {
 /**
  * 在主題底下新增留言
  * POST /api/chat/messages
- * body: { topicId, userId, text }
+ * body: { topicId, text }（留言者由登入狀態決定）
  */
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await req.json().catch(() => null);
     if (!body) {
@@ -84,18 +91,12 @@ export async function POST(req: NextRequest) {
     }
 
     const topicId = Number(body.topicId);
-    const authorId = Number(body.userId);
+    const authorId = auth;
     const text = String(body.text ?? "").trim();
 
     if (!topicId || Number.isNaN(topicId)) {
       return NextResponse.json(
         { message: "缺少或無效的 topicId" },
-        { status: 400 }
-      );
-    }
-    if (!authorId || Number.isNaN(authorId)) {
-      return NextResponse.json(
-        { message: "缺少或無效的 userId" },
         { status: 400 }
       );
     }
@@ -139,9 +140,12 @@ export async function POST(req: NextRequest) {
 /**
  * 主題發文者獎勵某則留言
  * PATCH /api/chat/messages
- * body: { messageId, topicId, giverUserId }
+ * body: { messageId, topicId }（給獎勵的人由登入狀態決定）
  */
 export async function PATCH(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await req.json().catch(() => null);
     if (!body) {
@@ -153,7 +157,7 @@ export async function PATCH(req: NextRequest) {
 
     const messageId = Number(body.messageId);
     const topicId = Number(body.topicId);
-    const giverUserId = Number(body.giverUserId); // 按星星的人（應該是 topic 發文者）
+    const giverUserId = auth; // 按星星的人，必須是 topic 發文者
 
     if (!messageId || Number.isNaN(messageId)) {
       return NextResponse.json(
@@ -164,12 +168,6 @@ export async function PATCH(req: NextRequest) {
     if (!topicId || Number.isNaN(topicId)) {
       return NextResponse.json(
         { message: "缺少或無效的 topicId" },
-        { status: 400 }
-      );
-    }
-    if (!giverUserId || Number.isNaN(giverUserId)) {
-      return NextResponse.json(
-        { message: "缺少或無效的 giverUserId" },
         { status: 400 }
       );
     }
@@ -197,6 +195,14 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // 不能獎勵自己的留言（否則可以在自己的主題下留言、自己按星星刷點數）
+    if (message.authorId === giverUserId) {
+      return NextResponse.json(
+        { message: "不能獎勵自己的留言" },
+        { status: 400 }
+      );
+    }
+
     // 已經給過獎勵就不能重複
     if (message.rewardedByAuthor) {
       return NextResponse.json(
@@ -212,10 +218,13 @@ export async function PATCH(req: NextRequest) {
     // 2) 留言作者 user.points += 5
     // 3) 新增一筆 PointTransaction
     const result = await prisma.$transaction(async (tx) => {
-      const updatedMsg = await tx.chatMessage.update({
-        where: { id: messageId },
+      // 只在「尚未被獎勵」時才更新；同時送出兩次時，第二次 count 會是 0
+      const { count } = await tx.chatMessage.updateMany({
+        where: { id: messageId, rewardedByAuthor: false },
         data: { rewardedByAuthor: true },
       });
+      if (count === 0) throw new Error("ALREADY_REWARDED");
+      const updatedMsg = { id: messageId, rewardedByAuthor: true };
 
       const updatedUser = await tx.user.update({
         where: { id: message.authorId },
@@ -245,6 +254,12 @@ export async function PATCH(req: NextRequest) {
       { status: 200 }
     );
   } catch (e) {
+    if (e instanceof Error && e.message === "ALREADY_REWARDED") {
+      return NextResponse.json(
+        { message: "此留言已獲得獎勵" },
+        { status: 400 }
+      );
+    }
     console.error("PATCH /api/chat/messages error", e);
     return NextResponse.json({ message: "伺服器錯誤" }, { status: 500 });
   }

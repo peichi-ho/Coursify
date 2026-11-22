@@ -3,8 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
-import PageShell from "@/components/PageShell";
-import SideDrawer from "@/components/SideDrawer";
+import AppShell from "@/components/AppShell";
 import { useRouter } from "next/navigation";
 
 const LS_USER_KEY = "coursify:user";
@@ -49,7 +48,7 @@ export default function WalletPage() {
           return;
         }
 
-        const res = await fetch(`/api/wallet/summary?userId=${userId}`);
+        const res = await fetch(`/api/wallet/summary`);
         const data = await res.json().catch(() => null);
 
         if (!res.ok || !data) {
@@ -114,7 +113,6 @@ export default function WalletPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
           amount: opt.id,
           message: `購買點數方案 ${opt.label}（${opt.price}元）`,
         }),
@@ -159,33 +157,10 @@ export default function WalletPage() {
   };
 
   return (
-    <PageShell>
-      <SideDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onNav={handleNav}
-      />
-
-      <div className="flex h-full w-full flex-col overflow-y-auto">
-        {/* Header：顏色／寬度同 CoursesPage */}
-        <div className="relative rounded-b-3xl bg-gradient-to-br from-[#3B82F6] to-[#7aa8ff] px-6 pt-8 pb-6">
-          <button
-            aria-label="開啟選單"
-            onClick={() => setDrawerOpen(true)}
-            className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <h1 className="mt-6 text-3xl font-bold text-white">
-            {displayName}的錢包
-          </h1>
-          <p className="mt-2 text-white/90 text-sm">
-            目前點數：<span className="font-semibold">x {points}</span>
-          </p>
-        </div>
-
+    <AppShell title="我的錢包" subtitle={`目前點數：${points} 點`}>
+      <div className="flex w-full flex-col">
         {/* 內容區 */}
-        <div className="flex-1 px-4 py-5 space-y-6">
+        <div className="flex-1 space-y-6">
           {/* Tabs */}
           <div className="flex rounded-xl bg-[#e8f1ff] p-1 text-sm font-medium text-gray-600">
             <button
@@ -285,6 +260,6 @@ export default function WalletPage() {
           </div>
         </div>
       </div>
-    </PageShell>
+    </AppShell>
   );
 }

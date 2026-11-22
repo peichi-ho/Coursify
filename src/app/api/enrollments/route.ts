@@ -1,6 +1,7 @@
 // src/app/api/enrollments/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 // ✅ 把老師名字統一格式：逗號→頓號、去空白、排序
 function normalizeTeacher(raw: string | null | undefined): string | null {
@@ -17,6 +18,9 @@ function normalizeTeacher(raw: string | null | undefined): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await req.json().catch(() => null);
     if (!body) {
@@ -26,18 +30,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userId = Number(body.userId);
+    const userId = auth;
     const courseName: string | undefined = body.courseName;
     const courseTeacher: string | null | undefined = body.courseTeacher;
     const weekday: string | null | undefined = body.weekday;
     const timeSlot: string | null | undefined = body.timeSlot;
-
-    if (!userId || Number.isNaN(userId)) {
-      return NextResponse.json(
-        { error: "userId 無效" },
-        { status: 400 }
-      );
-    }
 
     if (!courseName || !courseName.trim()) {
       return NextResponse.json(

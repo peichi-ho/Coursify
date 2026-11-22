@@ -1,25 +1,23 @@
 // src/app/api/notes/add/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabaseServer"; // ⭐ 新增：改用 Supabase Storage
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const formData = await req.formData();
 
-    const userId = Number(formData.get("userId"));
+    const userId = auth; // 上傳者由登入狀態決定
     const courseId = Number(formData.get("courseId"));
     const title = String(formData.get("title") ?? "").trim();
     const priceRaw = String(formData.get("price") ?? "").trim();
     const price = Number(priceRaw);
     const file = formData.get("file") as File | null;
 
-    if (!userId || Number.isNaN(userId)) {
-      return NextResponse.json(
-        { error: "缺少或無效的 userId" },
-        { status: 400 }
-      );
-    }
     if (!courseId || Number.isNaN(courseId)) {
       return NextResponse.json(
         { error: "缺少或無效的 courseId" },

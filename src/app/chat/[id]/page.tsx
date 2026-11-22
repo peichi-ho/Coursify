@@ -3,9 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import PageShell from "@/components/PageShell";
+import AppShell from "@/components/AppShell";
 import { Menu, MessageSquarePlus, Plus } from "lucide-react";
-import SideDrawer from "@/components/SideDrawer";
 
 const LS_USER_KEY = "coursify:user";
 
@@ -92,7 +91,6 @@ export default function CourseChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           courseId,
-          userId,
           title: newTitle.trim(),
           content: newContent.trim(),
         }),
@@ -121,37 +119,10 @@ export default function CourseChatPage() {
   };
 
   return (
-    <PageShell>
-      <SideDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onNav={handleNav}
-      />
-
-      <div className="flex h-full w-full flex-col overflow-y-auto">
-        {/* Header */}
-        <div className="relative rounded-b-3xl bg-gradient-to-br from-[#3B82F6] to-[#7aa8ff] px-6 pt-8 pb-6">
-          <div className="flex items-center justify-between mb-4">
-            <button
-              type="button"
-              aria-label="開啟選單"
-              onClick={() => setDrawerOpen(true)}
-              className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <div className="text-right">
-              <p className="text-xl font-bold text-white">{courseName}</p>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-white">課程聊天室</h1>
-          <p className="mt-1 text-sm text-white/90">
-            和同學一起討論作業、考試與課堂內容
-          </p>
-        </div>
-
+    <AppShell title={courseName} subtitle="課程討論區・和同學一起討論作業、考試與課堂內容">
+      <div className="flex w-full flex-col">
         {/* Topics list */}
-        <div className="px-6 py-5 space-y-4 pb-20">
+        <div className="space-y-4 pb-20">
           {loading ? (
             <p className="text-center text-sm text-gray-500">主題載入中…</p>
           ) : topics.length === 0 ? (
@@ -199,7 +170,7 @@ export default function CourseChatPage() {
       <button
         type="button"
         onClick={() => setShowAddModal(true)}
-        className="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-[#3B82F6] text-white shadow-xl hover:bg-[#5091f8]"
+        className="fixed bottom-20 right-6 z-30 md:bottom-8 md:right-8 flex h-14 w-14 items-center justify-center rounded-full bg-[#3B82F6] text-white shadow-xl hover:bg-[#5091f8]"
         aria-label="新增討論主題"
       >
         <Plus className="h-7 w-7" />
@@ -264,6 +235,6 @@ export default function CourseChatPage() {
           </div>
         </div>
       )}
-    </PageShell>
+    </AppShell>
   );
 }

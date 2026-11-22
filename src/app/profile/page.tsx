@@ -1,6 +1,8 @@
 // src/app/profile/page.tsx
 "use client";
 
+import AppShell from "@/components/AppShell";
+
 import { useEffect, useState, FormEvent } from "react";
 
 const LS_USER_KEY = "coursify:user";
@@ -97,7 +99,7 @@ export default function ProfilePage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/user/me?userId=${userId}`);
+        const res = await fetch(`/api/user/me`);
         const data = await res.json().catch(() => null);
 
         if (!res.ok || !data?.user) {
@@ -149,7 +151,6 @@ export default function ProfilePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId,
           name,
           department,
           oldPassword: oldPassword || undefined,
@@ -225,7 +226,6 @@ export default function ProfilePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId,
           courseName: courseName.trim(),
           courseTeacher: courseTeacher.trim() || null,
           weekday: courseWeekday,   // 例如 "一"
@@ -241,7 +241,7 @@ export default function ProfilePage() {
       }
 
       // 重新載入 user（簡單做法）
-      const reload = await fetch(`/api/user/me?userId=${userId}`);
+      const reload = await fetch(`/api/user/me`);
       const reloadData = await reload.json().catch(() => null);
       if (reload.ok && reloadData?.user) {
         setUser(reloadData.user);
@@ -295,30 +295,30 @@ export default function ProfilePage() {
 
   if (!userId) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 py-10">
-        <div className="mx-auto max-w-2xl rounded-2xl bg-white p-6 shadow">
+      <AppShell>
+        <div className="rounded-xl border border-slate-200 bg-white p-6">
           尚未登入，請先登入再查看個人資料。
         </div>
-      </main>
+      </AppShell>
     );
   }
 
   if (loading || !user) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 py-10">
-        <div className="mx-auto max-w-2xl rounded-2xl bg-white p-6 shadow">
+      <AppShell>
+        <div className="rounded-xl border border-slate-200 bg-white p-6">
           載入中...
         </div>
-      </main>
+      </AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-10">
-      <div className="mx-auto max-w-3xl space-y-6">
+    <AppShell title="個人資料與選課">
+      <div className="space-y-6">
         {/* 個人資料卡片 */}
         <section className="rounded-2xl bg-white p-6 shadow">
-          <h1 className="text-2xl font-bold text-[#0B1015] mb-4">個人資料</h1>
+          <h2 className="mb-4 text-lg font-semibold">基本資料</h2>
 
           {error && (
             <div className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -577,6 +577,6 @@ export default function ProfilePage() {
           )}
         </section>
       </div>
-    </main>
+    </AppShell>
   );
 }

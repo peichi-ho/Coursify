@@ -1,132 +1,73 @@
-import Image from "next/image";
+// src/app/page.tsx — 未登入時的產品介紹頁
 import Link from "next/link";
-import PageShell from "../components/PageShell";
+import {
+  CalendarDays,
+  Coins,
+  FileText,
+  GraduationCap,
+  MessagesSquare,
+} from "lucide-react";
 
-export default function Home() {
+const FEATURES = [
+  { icon: MessagesSquare, title: "課程討論區", desc: "同一堂課的同學自動進到同一個討論區，問作業、對考試範圍都在這裡。" },
+  { icon: FileText, title: "筆記市集", desc: "上架自己的筆記賺點數，也能先試閱再購買同學的精華整理。" },
+  { icon: CalendarDays, title: "智慧提醒", desc: "作業、考試、報告一次排進月曆，到期前在首頁提醒你。" },
+  { icon: Coins, title: "點數回饋", desc: "回答問題被發文者加星、筆記被購買，都能累積點數。" },
+];
+
+export default function Landing() {
   return (
-    <PageShell>
-      <div className="flex min-h-screen items-center justify-center bg-white px-4 py-8 text-[#0B1015]">
-      <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-[32px] bg-white px-6 py-10 shadow-xl sm:px-10">
-
-          {/* Title Section */}
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-[#3B82F6] sm:text-5xl md:text-6xl">
-              Coursify
-            </h1>
-          </div>
-
-          {/* Illustration Section - Magnifying Glass with Document */}
-          <div className="relative flex items-center justify-center">
-            <svg
-              width="200"
-              height="200"
-              viewBox="0 0 200 200"
-              className="w-48 sm:w-56"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Magnifying Glass */}
-              <g transform="rotate(-15 100 100)">
-                {/* Glass Circle */}
-                <circle
-                  cx="100"
-                  cy="100"
-                  r="50"
-                  stroke="#3B82F6"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                {/* Handle */}
-                <line
-                  x1="140"
-                  y1="140"
-                  x2="170"
-                  y2="170"
-                  stroke="#3B82F6"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
-              </g>
-              
-              {/* Document inside magnifying glass */}
-              <g transform="translate(80, 80)">
-                {/* Document */}
-                <rect
-                  x="20"
-                  y="20"
-                  width="40"
-                  height="50"
-                  fill="white"
-                  stroke="#3B82F6"
-                  strokeWidth="2"
-                  rx="2"
-                />
-                {/* Folded corner */}
-                <path
-                  d="M 20 20 L 30 20 L 20 30 Z"
-                  fill="#E5E7EB"
-                  stroke="#3B82F6"
-                  strokeWidth="1"
-                />
-                {/* Face inside document */}
-                <circle cx="32" cy="35" r="2" fill="#1F2937" />
-                <circle cx="48" cy="35" r="2" fill="#1F2937" />
-                <line
-                  x1="32"
-                  y1="42"
-                  x2="48"
-                  y2="42"
-                  stroke="#1F2937"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-                {/* Blush marks */}
-                <circle cx="26" cy="38" r="3" fill="#93C5FD" opacity="0.6" />
-                <circle cx="54" cy="38" r="3" fill="#93C5FD" opacity="0.6" />
-              </g>
-            </svg>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex w-full flex-col gap-4">
-            {/* Login Button */}
-            <Link href="/login" className="block w-full">
-              <button className="flex h-14 w-full items-center justify-center gap-3 rounded-[12px] bg-[#3B82F6] text-base font-medium text-white transition-colors hover:bg-[#2563EB] active:bg-[#1D4ED8]">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <rect x="4" y="4" width="12" height="12" rx="2" fill="white" />
-                  <rect x="6" y="6" width="8" height="3" rx="1" fill="#3B82F6" />
-                </svg>
-                登入
-              </button>
-            </Link>
-          </div>
-
-            {/* Register Button */}
-          <Link href="/signup" className="block w-full">
-            <button className="flex h-14 w-full items-center justify-center gap-3 rounded-[12px] bg-[#3B82F6] text-base font-medium text-white transition-colors hover:bg-[#2563EB] active:bg-[#1D4ED8]">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect x="4" y="4" width="12" height="12" rx="2" fill="white" />
-                <rect x="6" y="6" width="8" height="3" rx="1" fill="#3B82F6" />
-              </svg>
-              註冊
-            </button>
-          </Link>
-          </div>
+    <div className="min-h-screen bg-white text-slate-900">
+      <header className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
+        <div className="flex items-center gap-2">
+          <GraduationCap className="h-7 w-7 text-blue-600" />
+          <span className="text-lg font-semibold tracking-tight">Coursify</span>
         </div>
+        <div className="flex items-center gap-2">
+          <Link href="/login" className="rounded-lg px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">
+            登入
+          </Link>
+          <Link href="/signup" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            免費註冊
+          </Link>
+        </div>
+      </header>
 
- 
-   </PageShell>
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-12 text-center md:px-8 md:pt-20">
+        <p className="mb-4 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+          給大學生的課程協作平台
+        </p>
+        <h1 className="mx-auto max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
+          把討論、筆記和提醒，
+          <br className="hidden sm:block" />
+          集中在你修的每一堂課
+        </h1>
+        <p className="mx-auto mt-5 max-w-xl text-base text-slate-500">
+          不用再在群組、雲端資料夾和行事曆之間切換。選好課，Coursify 幫你把同學和資源接起來。
+        </p>
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link href="/signup" className="w-full rounded-lg bg-blue-600 px-6 py-3 text-sm font-medium text-white hover:bg-blue-700 sm:w-auto">
+            開始使用
+          </Link>
+          <Link href="/login" className="w-full rounded-lg border border-slate-200 px-6 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto">
+            我已經有帳號
+          </Link>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-100 bg-slate-50">
+        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-14 sm:grid-cols-2 md:px-8 lg:grid-cols-4">
+          {FEATURES.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="rounded-xl border border-slate-200 bg-white p-5">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+                <Icon className="h-5 w-5 text-blue-600" />
+              </div>
+              <h3 className="font-medium">{title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-500">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }

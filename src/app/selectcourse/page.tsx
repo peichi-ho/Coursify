@@ -126,7 +126,6 @@ export default function SelectCoursesPage() {
     try {
       // 後端 timeSlot 就先用顯示文字（例如 B-2（07:00-09:00））
       const payload = {
-        userId,
         courses: courses.map((c) => ({
           name: c.name,
           teacher: c.teacher,

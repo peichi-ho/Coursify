@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const userId = Number(searchParams.get("userId"));
-
-  if (!userId) {
-    return NextResponse.json(
-      { error: "缺少 userId" },
-      { status: 400 }
-    );
-  }
+export async function GET() {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
 
   const memos = await prisma.memo.findMany({
-    where: { userId },
-    orderBy: { dateISO: "asc" }
+    where: { userId: auth },
+    orderBy: { dateISO: "asc" },
   });
 
   return NextResponse.json({ memos });

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
-import PageShell from "@/components/PageShell";
-import SideDrawer from "@/components/SideDrawer";
+import AppShell from "@/components/AppShell";
 import { useRouter } from "next/navigation";
 
 type UICourse = {
@@ -41,7 +40,7 @@ export default function CoursesPage() {
           return;
         }
 
-        const res = await fetch(`/api/courses/my?userId=${userId}`);
+        const res = await fetch(`/api/courses/my`);
         const data = await res.json().catch(() => null);
 
         if (!res.ok || !data?.courses) {
@@ -71,29 +70,10 @@ export default function CoursesPage() {
   }, []);
 
   return (
-    <PageShell>
-      <SideDrawer
-        open={open}
-        onClose={() => setOpen(false)}
-        onNav={(p) => router.push(p)}
-      />
-
-      <div className="flex h-full w-full flex-col overflow-y-auto">
-        {/* Header */}
-        <div className="relative rounded-b-3xl bg-gradient-to-br from-[#3B82F6] to-[#7aa8ff] px-6 pt-8 pb-6">
-          <button
-            aria-label="開啟選單"
-            onClick={() => setOpen(true)}
-            className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-          <h1 className="mt-6 text-3xl font-bold text-white">科目列表</h1>
-          <p className="mt-2 text-white/90">請選擇想進入聊天室的課程</p>
-        </div>
-
+    <AppShell title="課程討論" subtitle="選擇一門課，進入同學的討論區">
+      <div className="flex w-full flex-col">
         {/* List / 狀態顯示 */}
-        <div className="px-4 py-5 space-y-4">
+        <div className="space-y-4">
           {loading ? (
             <p className="text-center text-sm text-gray-500">課程載入中…</p>
           ) : courses.length === 0 ? (
@@ -136,6 +116,6 @@ export default function CoursesPage() {
           )}
         </div>
       </div>
-    </PageShell>
+    </AppShell>
   );
 }

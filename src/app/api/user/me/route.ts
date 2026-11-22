@@ -1,6 +1,7 @@
 // src/app/api/user/me/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
 // 共用的 select，避免把 passwordHash 傳給前端
@@ -18,19 +19,12 @@ const userSelect = {
   },
 };
 
-export async function GET(req: NextRequest) {
+export async function GET() {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+  const userId = auth;
+
   try {
-    const { searchParams } = new URL(req.url);
-    const userIdParam = searchParams.get("userId");
-    const userId = Number(userIdParam);
-
-    if (!userId || Number.isNaN(userId)) {
-      return NextResponse.json(
-        { error: "缺少或無效的 userId" },
-        { status: 400 }
-      );
-    }
-
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: userSelect,
@@ -54,19 +48,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+  const userId = auth;
+
   try {
     const body = await req.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
         { error: "缺少 request body" },
-        { status: 400 }
-      );
-    }
-
-    const userId = Number(body.userId);
-    if (!userId || Number.isNaN(userId)) {
-      return NextResponse.json(
-        { error: "缺少或無效的 userId" },
         { status: 400 }
       );
     }

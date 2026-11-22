@@ -1,25 +1,12 @@
 // src/app/api/wallet/summary/route.ts
 import { NextResponse } from "next/server";
-import {prisma} from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const userIdParam = searchParams.get("userId");
-
-  if (!userIdParam) {
-    return NextResponse.json(
-      { error: "userId is required" },
-      { status: 400 }
-    );
-  }
-
-  const userId = Number(userIdParam);
-  if (Number.isNaN(userId)) {
-    return NextResponse.json(
-      { error: "userId must be a number" },
-      { status: 400 }
-    );
-  }
+export async function GET() {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+  const userId = auth;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
