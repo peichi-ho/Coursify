@@ -3,9 +3,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import PageShell from "@/components/PageShell";
+import AppShell from "@/components/AppShell";
 import { Menu, Star } from "lucide-react";
-import SideDrawer from "@/components/SideDrawer";
 
 const LS_USER_KEY = "coursify:user";
 
@@ -141,7 +140,6 @@ export default function TopicPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topicId,
-          userId,
           text,
         }),
       });
@@ -196,7 +194,6 @@ export default function TopicPage() {
         body: JSON.stringify({
           messageId: msg.id,
           topicId,
-          giverUserId: userId,
         }),
       });
 
@@ -237,35 +234,10 @@ export default function TopicPage() {
   };
 
   return (
-    <PageShell>
-      <SideDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onNav={handleNav}
-      />
-
-      <div className="relative flex h-full w-full flex-col overflow-y-auto">
-        {/* Header */}
-        <div className="relative rounded-b-3xl bg-gradient-to-br from-[#3B82F6] to-[#7aa8ff] px-6 pt-8 pb-6">
-          <div className="mb-6 flex items-center justify-between">
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="rounded-lg p-2 text-white hover:bg-white/20"
-              aria-label="menu"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <div className="text-2xl font-bold text-white">
-              {courseName}
-            </div>
-          </div>
-          <div className="text-3xl font-extrabold text-white/95 tracking-wide">
-            課程聊天室
-          </div>
-        </div>
-
+    <AppShell title={courseName} subtitle="課程討論">
+      <div className="flex w-full flex-col">
         {/* 內容區 */}
-        <div className="mx-auto w-full max-w-[360px] px-6 py-5">
+        <div className="w-full max-w-3xl">
           {/* 主題內容 */}
           <div className="mb-5 space-y-2 border-b border-gray-300 pb-5">
             <div className="flex items-center gap-3">
@@ -351,8 +323,8 @@ export default function TopicPage() {
         </div>
 
         {/* 底部輸入列 */}
-        <div className="pointer-events-none sticky bottom-0 z-10 -mt-16 flex w-full justify-center pb-6">
-          <div className="pointer-events-auto mx-auto w-full max-w-[360px] px-6">
+        <div className="pointer-events-none sticky bottom-16 z-10 -mt-16 md:bottom-0 flex w-full justify-center pb-6">
+          <div className="pointer-events-auto mx-auto w-full max-w-3xl px-6">
             <div className="flex items-center rounded-full bg-[#dbe7ff] px-5 py-4">
               <input
                 value={draft}
@@ -371,6 +343,6 @@ export default function TopicPage() {
           </div>
         </div>
       </div>
-    </PageShell>
+    </AppShell>
   );
 }
