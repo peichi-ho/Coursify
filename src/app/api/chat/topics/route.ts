@@ -1,12 +1,16 @@
 // src/app/api/chat/topics/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 /**
  * 取得某堂課的所有主題列表
  * GET /api/chat/topics?courseId=123
  */
 export async function GET(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { searchParams } = new URL(req.url);
     const courseIdRaw = searchParams.get("courseId");
@@ -50,9 +54,12 @@ export async function GET(req: NextRequest) {
 /**
  * 新增一個主題
  * POST /api/chat/topics
- * body: { courseId, userId, title, content }
+ * body: { courseId, title, content }（發文者由登入狀態決定）
  */
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = await req.json().catch(() => null);
     if (!body) {
@@ -63,19 +70,13 @@ export async function POST(req: NextRequest) {
     }
 
     const courseId = Number(body.courseId);
-    const authorId = Number(body.userId);
+    const authorId = auth;
     const title = String(body.title ?? "").trim();
     const content = String(body.content ?? "").trim();
 
     if (!courseId || Number.isNaN(courseId)) {
       return NextResponse.json(
         { message: "缺少或無效的 courseId" },
-        { status: 400 }
-      );
-    }
-    if (!authorId || Number.isNaN(authorId)) {
-      return NextResponse.json(
-        { message: "缺少或無效的 userId" },
         { status: 400 }
       );
     }

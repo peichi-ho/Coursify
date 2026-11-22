@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { setSession } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,7 +63,9 @@ export async function POST(req: NextRequest) {
 
     const { passwordHash: _ignored, ...safeUser } = created;
 
-    return NextResponse.json({ user: safeUser }, { status: 201 });
+    const res = NextResponse.json({ user: safeUser }, { status: 201 });
+    await setSession(res, created.id);
+    return res;
   } catch (e) {
     console.error("POST /api/auth/signup error", e);
     return NextResponse.json(

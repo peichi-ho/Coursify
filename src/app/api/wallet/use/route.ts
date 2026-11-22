@@ -1,23 +1,26 @@
 // src/app/api/wallet/use/route.ts
 import { NextResponse } from "next/server";
-import {prisma} from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 type Body = {
-  userId: number;
   amount: number;   // 要扣的點數
   message?: string; // 例如「購買筆記：期中考總整理」
 };
 
 export async function POST(req: Request) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const body = (await req.json()) as Partial<Body>;
-    const userId = Number(body.userId);
+    const userId = auth;
     const amount = Number(body.amount || 0);
     const message = (body.message ?? "").toString();
 
-    if (!userId || Number.isNaN(userId) || amount <= 0) {
+    if (!Number.isInteger(amount) || amount <= 0) {
       return NextResponse.json(
-        { error: "userId 或 amount 不合法" },
+        { error: "amount 不合法" },
         { status: 400 }
       );
     }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 type IncomingCourse = {
   name: string;
@@ -9,15 +10,18 @@ type IncomingCourse = {
 };
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+  const userId = auth;
+
   try {
-    const { userId, courses } = (await req.json()) as {
-      userId: number;
+    const { courses } = (await req.json()) as {
       courses: IncomingCourse[];
     };
 
-    if (!userId || !Array.isArray(courses) || courses.length === 0) {
+    if (!Array.isArray(courses) || courses.length === 0) {
       return NextResponse.json(
-        { message: "缺少 userId 或 courses" },
+        { message: "缺少 courses" },
         { status: 400 }
       );
     }
