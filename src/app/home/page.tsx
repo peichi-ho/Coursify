@@ -216,11 +216,7 @@ export default function HomePage() {
                   <span className="text-sm font-semibold">
                     {n.price > 0 ? `${n.price} 點` : "免費"}
                   </span>
-                  {n.hasFile && (
-                    <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                      可試閱
-                    </span>
-                  )}
+                  <span className="text-xs text-blue-600">查看</span>
                 </div>
               </Link>
             ))}
