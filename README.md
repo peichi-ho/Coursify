@@ -1,72 +1,140 @@
 # Coursify
 
-Coursify is a student-centered course learning platform that integrates course discussions, note sharing, smart reminder, and peer-to-peer note trading to enhance collaborative learning.
+給大學生的課程協作平台：同一堂課的同學自動進到同一個討論區，可以分享與買賣課堂筆記、用點數回饋幫忙解答的人，並把作業和考試排進提醒月曆。
+
+🔗 **線上版本**：https://coursify-gules.vercel.app
 
 ---
 
-## Motivation
+## 專案背景
 
-University students often use fragmented tools for learning, such as separate platforms for discussions, notes, and study resources.  
-Coursify aims to centralize these activities into one platform, enabling students to learn, share knowledge, and collaborate more efficiently.
+- 2025 年 11–12 月，政大「創創入門」課程的 5 人團隊專案，我是團隊中唯一的開發者，負責全部程式（前端、後端、資料庫、部署）
+- 入圍 2025 政大新創之星競賽決賽
+- 2026 年 11 月，使用 Claude Code 重新檢查當初用 Cursor 做出的 MVP，找出安全性與資料正確性問題並逐一修正（見下方「2026 改版紀錄」）
 
-This project was developed as part of an academic and product development initiative, focusing on building a functional MVP with real user interaction.
+## 主要功能
 
----
+| 功能 | 說明 |
+|---|---|
+| 課程與選課 | 依「課名＋老師＋星期＋節次」比對，同一門課的同學會進到同一個課程空間 |
+| 課程討論區 | 發主題、留言；發文者可以給好答案加星，留言者獲得點數 |
+| 筆記市集 | 上架筆記並定價，購買後才能開啟完整檔案，賣家收到點數 |
+| 智慧提醒 | 月曆管理作業、考試；首頁列出即將到期的事項，兩天內到期的會特別標示 |
+| 首頁儀表板 | 今日課程、即將到期的提醒、所修課程的最新筆記 |
 
-##  Key Features
+## 技術架構
 
--  User authentication (sign up / login)
--  Course enrollment and management
--  Smart reminder
--  Course-based discussion rooms
--  Note sharing and preview
--  Peer-to-peer note purchasing system
--  Point-based reward mechanism
--  User profile management
-
----
-
-##  Tech Stack
-
-**Frontend**
-- Next.js (App Router)
-- React
-- Tailwind CSS
-
-**Backend**
-- Next.js API Routes
-- Prisma ORM
-
-**Database**
-- PostgreSQL (Supabase)
-
-**Other Tools**
-- bcrypt (password hashing)
-- Vercel (deployment)
+| 層級 | 技術 |
+|---|---|
+| 前端 | Next.js 16（App Router）、React 19、TypeScript、Tailwind CSS |
+| 後端 | Next.js Route Handlers（REST API） |
+| 資料庫 | PostgreSQL（Supabase）＋ Prisma ORM |
+| 檔案儲存 | Supabase Storage（私人 bucket，透過短效簽名網址存取） |
+| 驗證 | bcrypt 密碼雜湊、HS256 簽章的 httpOnly session cookie（jose） |
+| 部署 | Vercel |
 
 ---
 
-##  Live Demo
+## 2026 改版紀錄
 
-🔗 https://coursify-4cqr.vercel.app/
+原本的 MVP 是 2025 年用 Cursor 快速做出來的，功能能動。2026 年用 Claude Code 檢查程式碼後，發現幾個嚴重問題。處理方式是每個問題都先**重現或確認問題存在**，修正後再**用測試驗證**。
 
-> Note: This project is an MVP. Some features are still under active development.
+### 1. 身分驗證：API 相信前端傳來的 userId
+
+**問題**：登入資訊只存在瀏覽器的 localStorage，每支 API 都直接使用前端傳來的 `userId`。只要改一個數字，就能讀取別人的資料、冒充別人發文，或幫自己加任意點數。
+
+**修正**（[`src/lib/auth.ts`](src/lib/auth.ts)）：
+- 登入後由後端發出簽章過的 httpOnly cookie，所有 API 改從 cookie 取得使用者，忽略前端傳的 `userId`
+- 修改、刪除備忘錄與退選時，同時比對資料擁有者
+- 修正討論區可以「自己獎勵自己」刷點數，以及同時按兩次會重複發獎勵的問題
+
+**驗證**：對本機伺服器送 18 個真實請求，涵蓋未登入、跨帳號修改、偽造 userId、竄改 cookie、登出後存取，全部被正確拒絕。
+
+### 2. 點數並發超扣
+
+**問題**：扣點的寫法是「先讀餘額 → 在程式裡判斷夠不夠 → 寫回 餘額 − 金額」。多個請求同時進來時，每個都讀到同一個舊餘額、都判斷「夠」，結果只扣一次錢卻成功好幾次。
+
+**重現**：寫了 [`scripts/concurrency-test.mjs`](scripts/concurrency-test.mjs)，餘額 10 點時同時送出 5 個「扣 10 點」的請求：
+
+| | 結果 |
+|---|---|
+| 修正前 | **10 次中 9 次出錯**：5 個請求全部成功，留下 5 筆扣款紀錄，餘額卻只少 10 點 |
+| 修正後 | **10 次全部正確**：只有 1 個成功，其餘回傳「點數不足」 |
+
+唯一沒出錯的那次，是開發伺服器第一次編譯、請求沒有真的同時抵達。這也說明並發問題用「手動點一點」很難發現。
+
+**修正**（[`src/lib/points.ts`](src/lib/points.ts)）：把「餘額夠不夠」寫進資料庫的更新條件：
+
+```sql
+UPDATE "User" SET points = points - $amount
+WHERE id = $id AND points >= $amount
+```
+
+PostgreSQL 會鎖住這一列，後到的請求等前一個完成後，再用新的餘額重新判斷。儲值也從「讀出來加完再寫回」改成資料庫遞增，避免同時儲值時少加。
+
+### 3. 筆記購買流程
+
+**問題**：
+- 筆記列表直接回傳公開的檔案網址，不用購買就能下載付費筆記
+- 購買只扣買家點數，沒有寫入購買紀錄，賣家也收不到點數
+- 同一份筆記可以被重複扣款
+
+**修正**：
+- `POST /api/notes/[id]/purchase`：在同一筆 transaction 裡寫入購買紀錄、買家扣點、賣家入帳、雙方各記一筆，任何一步失敗就全部回滾。重複購買由資料庫的唯一索引擋下，連續快速點擊也只會成功一次
+- `GET /api/notes/[id]/file`：只有作者、已購買者或免費筆記可以取得檔案，回傳 60 秒後失效的簽名網址
+- Supabase Storage 的 bucket 改為私人，舊的公開網址已無法存取
+
+**驗證**：測試腳本共 21 項檢查（並發扣點、同時重複購買、同時購買不同筆記、檔案權限、儲值限制），**連續執行 10 次、210 項全部通過**；並在瀏覽器實際走過購買與開啟檔案的流程。
+
+### 4. 部署失敗與框架漏洞
+
+**問題**：合併改版後 Vercel build 失敗（`Failed to collect page data`），線上一直停在舊版。
+
+**排查**：把本機 `.env` 暫時移開來模擬 Vercel 環境，重現出相同錯誤，找到原因是 Prisma 與 Supabase 用戶端在「載入檔案時」就讀取環境變數，變數不存在就直接報錯。修正後在有、無 `.env` 兩種情況下都能 build 成功。
+
+同時 `npm audit` 發現 Next.js 16.0.1 有嚴重等級的遠端執行程式碼漏洞（GHSA-9qr9-h5gf-34mp），升級到 16.4.6 後 Next.js 相關漏洞清零，並重跑權限測試確認沒有影響。
+
+### 5. 介面改版
+
+原本所有頁面都包在固定 390px 寬的手機外框裡，桌機上看起來很空。改成響應式版型：桌機是左側導覽列，手機是底部分頁列；首頁改為儀表板，筆記市集改為卡片式商品列表。
 
 ---
 
-##  My Role
+## AI 工具的使用方式
 
-- Designed and implemented the full-stack architecture
-- Developed frontend UI and user interactions with Next.js
-- Designed database schema and Prisma models
-- Implemented core features such as discussion rooms and note trading
-- Integrated PostgreSQL database using Supabase
-- Deployed and managed the application on Vercel
+- **2025 MVP**：用 Cursor 生成大部分程式碼，我負責拆解需求、決定資料模型和頁面流程
+- **2026 改版**：由 Claude Code 檢查程式碼、撰寫測試與實作修正；我負責決定要修哪些問題與先後順序、合併 PR，以及設定 Vercel 環境變數與 Supabase Storage 權限
 
 ---
 
-##  Project Status
+## 本機執行
 
--  Core features implemented
--  User feedback collection and feature refinement ongoing
+需要 Node.js 20 以上，以及一個 Supabase 專案（PostgreSQL ＋ 名為 `notes` 的私人 Storage bucket）。
 
+```bash
+npm install
+npx prisma generate
+npm run dev
+```
+
+在專案根目錄建立 `.env`：
+
+```
+DATABASE_URL=postgresql://...
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+SESSION_SECRET=<至少 32 字元的隨機字串>
+```
+
+執行並發與購買流程測試（會在資料庫建立 `@example.test` 結尾的測試帳號，只允許對本機執行）：
+
+```bash
+node scripts/concurrency-test.mjs
+```
+
+## 已知限制與下一步
+
+- **CI**：目前測試需要手動執行，下一步是建立測試用資料庫，讓 GitHub Actions 在每次 push 時自動跑型別檢查、build 與整合測試
+- **Lint**：升級 Next.js 後新的 lint 規則在舊頁面有 10 個錯誤（主要是 `useEffect` 內直接 `setState`），尚未清理
+- **儲值**：點數儲值是模擬流程，尚未串接金流
+- **筆記試閱**：目前沒有真正的試閱功能（例如只給第一頁），購買前只能看到標題與價格
