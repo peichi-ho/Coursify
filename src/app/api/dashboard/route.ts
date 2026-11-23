@@ -80,7 +80,7 @@ export async function GET() {
         authorName: n.user.name,
         courseId: n.course.id,
         courseName: n.course.name,
-        hasFile: Boolean(n.fileUrl),
+        hasFile: Boolean(n.fullFilePath ?? n.fileUrl),
       })),
     });
   } catch (e) {

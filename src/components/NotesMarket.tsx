@@ -1,11 +1,11 @@
 // src/components/NotesMarket.tsx
 // 筆記市集：/notes（全部課程）與 /notes/[courseId]（單一課程）共用。
-// 購買與試閱的邏輯沿用原版，下一輪會改成「後端記錄購買、買了才能看全文」。
+// 購買走 /api/notes/[id]/purchase；檔案走 /api/notes/[id]/file（後端檢查權限、發短效網址）。
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, FileText, Plus, Upload, X } from "lucide-react";
+import { Check, FileText, Plus, Upload, X } from "lucide-react";
 import AppShell from "@/components/AppShell";
 
 const LS_USER_KEY = "coursify:user";
@@ -16,22 +16,21 @@ type NoteItem = {
   authorName: string;
   title: string;
   price: number;
-  fileUrl: string | null;
+  hasFile: boolean;
+  soldCount: number;
+  isMine: boolean;
+  purchased: boolean;
   courseId: number;
   courseName: string;
 };
-type ApiNote = { id: number; authorName: string; title: string; price: number; fileUrl?: string | null };
+type ApiNote = Omit<NoteItem, "courseId" | "courseName">;
 
 async function fetchCourseNotes(course: Course): Promise<NoteItem[]> {
   const res = await fetch(`/api/notes/list?courseId=${course.id}`);
   const data = await res.json().catch(() => null);
   if (!res.ok || !data?.notes) return [];
   return (data.notes as ApiNote[]).map((n) => ({
-    id: n.id,
-    authorName: n.authorName,
-    title: n.title,
-    price: n.price,
-    fileUrl: n.fileUrl ?? null,
+    ...n,
     courseId: course.id,
     courseName: course.name,
   }));
@@ -101,32 +100,41 @@ export default function NotesMarket({ initialCourseId }: { initialCourseId?: num
     } catch {}
   }
 
-  function handlePreview(note: NoteItem) {
-    if (!note.fileUrl) return alert("此筆記尚未提供試閱檔案");
-    window.open(note.fileUrl, "_blank");
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  // 先開一個空白分頁再填網址：等 fetch 回來才 window.open 會被瀏覽器當成彈出視窗擋掉
+  async function openFile(note: NoteItem) {
+    const win = window.open("", "_blank");
+    const res = await fetch(`/api/notes/${note.id}/file`);
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.url) {
+      win?.close();
+      alert(data?.error ?? "無法開啟檔案");
+      return;
+    }
+    if (win) win.location.replace(data.url);
+    else window.location.assign(data.url);
   }
 
   async function handleBuy(note: NoteItem) {
-    if (!note.price || note.price <= 0) {
-      if (note.fileUrl) window.open(note.fileUrl, "_blank");
-      else alert("此筆記暫無上傳檔案");
-      return;
-    }
     if (!confirm(`確定用 ${note.price} 點購買「${note.title}」？`)) return;
-
-    const res = await fetch("/api/wallet/use", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: note.price, message: `購買筆記：${note.title}` }),
-    });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data) {
-      alert(data?.error ?? "購買失敗，可能是點數不足");
-      return;
+    setBusyId(note.id);
+    try {
+      const res = await fetch(`/api/notes/${note.id}/purchase`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        alert(data?.error ?? "購買失敗");
+        return;
+      }
+      syncLocalPoints(data.points);
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === note.id ? { ...n, purchased: true, soldCount: n.soldCount + 1 } : n
+        )
+      );
+    } finally {
+      setBusyId(null);
     }
-    syncLocalPoints(data.points);
-    alert(`購買成功，已扣除 ${note.price} 點，目前點數：${data.points}`);
-    if (note.fileUrl) window.open(note.fileUrl, "_blank");
   }
 
   function openAdd() {
@@ -158,15 +166,7 @@ export default function NotesMarket({ initialCourseId }: { initialCourseId?: num
       const n = data.note;
       const course = courses.find((c) => c.id === newCourseId);
       setNotes((prev) => [
-        {
-          id: n.id,
-          authorName: n.authorName,
-          title: n.title,
-          price: n.price,
-          fileUrl: n.fileUrl ?? null,
-          courseId: Number(newCourseId),
-          courseName: course?.name ?? "",
-        },
+        { ...(n as ApiNote), courseId: Number(newCourseId), courseName: course?.name ?? "" },
         ...prev,
       ]);
       setShowAdd(false);
@@ -239,26 +239,29 @@ export default function NotesMarket({ initialCourseId }: { initialCourseId?: num
                 {n.courseName}
               </span>
               <h3 className="line-clamp-2 font-medium">{n.title}</h3>
-              <p className="mt-0.5 text-sm text-slate-500">{n.authorName}</p>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {n.isMine ? "我的筆記" : n.authorName}・已售 {n.soldCount}
+              </p>
               <div className="mt-auto flex items-center justify-between pt-4">
                 <span className="text-lg font-semibold">{n.price > 0 ? `${n.price} 點` : "免費"}</span>
-                <div className="flex gap-2">
-                  {n.fileUrl && n.price > 0 && (
-                    <button
-                      onClick={() => handlePreview(n)}
-                      className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-                    >
-                      <Eye className="h-4 w-4" />
-                      試閱
-                    </button>
-                  )}
+                {n.isMine || n.purchased || n.price <= 0 ? (
+                  <button
+                    onClick={() => openFile(n)}
+                    disabled={!n.hasFile}
+                    className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    {n.purchased && <Check className="h-4 w-4 text-emerald-600" />}
+                    {n.hasFile ? "開啟" : "無檔案"}
+                  </button>
+                ) : (
                   <button
                     onClick={() => handleBuy(n)}
-                    className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                    disabled={busyId === n.id}
+                    className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60"
                   >
-                    {n.price > 0 ? "購買" : "開啟"}
+                    {busyId === n.id ? "購買中…" : "購買"}
                   </button>
-                </div>
+                )}
               </div>
             </article>
           ))}
