@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { supabaseServer } from "@/lib/supabaseServer"; // ⭐ 新增：改用 Supabase Storage
+import { getSupabaseServer } from "@/lib/supabaseServer";
 
 export async function POST(req: NextRequest) {
   const auth = await requireUser();
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const storagePath = `notes/${safeFilename}`; // 存在 bucket "notes" 底下
 
     // ⭐ 3) 上傳到 Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabaseServer
+    const { data: uploadData, error: uploadError } = await getSupabaseServer()
       .storage
       .from("notes") // bucket 名稱
       .upload(storagePath, buffer, {
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ⭐ 4) 取得 public URL（或你也可以只存 path）
-    const { data: publicUrlData } = supabaseServer
+    const { data: publicUrlData } = getSupabaseServer()
       .storage
       .from("notes")
       .getPublicUrl(uploadData.path);
