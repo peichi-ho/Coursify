@@ -30,9 +30,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (Number.isNaN(price) || price < 0) {
+    if (!Number.isInteger(price) || price < 0) {
       return NextResponse.json(
-        { error: "售價必須是非負數字" },
+        { error: "售價必須是 0 以上的整數" },
         { status: 400 }
       );
     }
@@ -83,30 +83,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ⭐ 4) 取得 public URL（或你也可以只存 path）
-    const { data: publicUrlData } = getSupabaseServer()
-      .storage
-      .from("notes")
-      .getPublicUrl(uploadData.path);
-
-    const fileUrl = publicUrlData.publicUrl;
-    const fullFilePath = uploadData.path; // 如果你 schema 有 fullFilePath 可存這個
-
-    // ⭐ 5) 寫入資料庫
+    // ⭐ 4) 只存檔案在 bucket 裡的路徑，不存公開網址；
+    //       之後由 /api/notes/[id]/file 檢查權限後發 60 秒的簽名網址
     const note = await prisma.note.create({
       data: {
         courseId,
         userId,
         title,
         price,
-        fileUrl,
-        fullFilePath,
+        fullFilePath: uploadData.path,
       },
-      include: {
-        user: {
-          select: { id: true, name: true },
-        },
-      },
+      include: { user: { select: { id: true, name: true } } },
     });
 
     return NextResponse.json(
@@ -116,9 +103,10 @@ export async function POST(req: NextRequest) {
           authorName: note.user.name,
           title: note.title,
           price: note.price,
-          fileUrl: note.fileUrl,
-          // 目前先拿同一個網址當試閱
-          previewUrl: note.fileUrl,
+          hasFile: true,
+          soldCount: 0,
+          isMine: true,
+          purchased: false,
         },
       },
       { status: 201 }
